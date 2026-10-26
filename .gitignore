@@ -1,0 +1,14 @@
+# Visual Studio / .NET
+.vs/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Local secrets and environment settings
+.env
+.env.*
+!.env.example
+appsettings.Local.json

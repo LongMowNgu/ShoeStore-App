@@ -1,0 +1,38 @@
+;;; 
+Export: Release 19.0.0.0.0 - Production on Sun Nov 8 23:11:25 2026
+Version 19.3.0.0.0
+
+Copyright (c) 1982, 2019, Oracle and/or its affiliates.  All rights reserved.
+;;; 
+Connected to: Oracle Database 19c Enterprise Edition Release 19.0.0.0.0 - Production
+Starting "SYSTEM"."SYS_EXPORT_SCHEMA_01":  system/********@orcl SCHEMAS=BTL_GIAYTHETHAO DIRECTORY=GIAYTHE_BACKUP DUMPFILE=BTL_GIAYTHETHAO.dmp LOGFILE=export.log 
+Processing object type SCHEMA_EXPORT/TABLE/TABLE_DATA
+Processing object type SCHEMA_EXPORT/TABLE/INDEX/STATISTICS/INDEX_STATISTICS
+Processing object type SCHEMA_EXPORT/TABLE/STATISTICS/TABLE_STATISTICS
+Processing object type SCHEMA_EXPORT/STATISTICS/MARKER
+Processing object type SCHEMA_EXPORT/USER
+Processing object type SCHEMA_EXPORT/SYSTEM_GRANT
+Processing object type SCHEMA_EXPORT/DEFAULT_ROLE
+Processing object type SCHEMA_EXPORT/TABLESPACE_QUOTA
+Processing object type SCHEMA_EXPORT/PRE_SCHEMA/PROCACT_SCHEMA
+Processing object type SCHEMA_EXPORT/TABLE/TABLE
+Processing object type SCHEMA_EXPORT/TABLE/GRANT/OWNER_GRANT/OBJECT_GRANT
+Processing object type SCHEMA_EXPORT/TABLE/CONSTRAINT/CONSTRAINT
+Processing object type SCHEMA_EXPORT/TABLE/CONSTRAINT/REF_CONSTRAINT
+. . exported "BTL_GIAYTHETHAO"."PRODUCTVARIANTS"         32.52 KB    1300 rows
+. . exported "BTL_GIAYTHETHAO"."PRODUCTS"                21.04 KB     130 rows
+. . exported "BTL_GIAYTHETHAO"."CUSTOMERS"               8.281 KB      12 rows
+. . exported "BTL_GIAYTHETHAO"."ORDERS"                  8.382 KB      30 rows
+. . exported "BTL_GIAYTHETHAO"."PAYMENTS"                8.281 KB      28 rows
+. . exported "BTL_GIAYTHETHAO"."EMPLOYEES"               7.781 KB       8 rows
+. . exported "BTL_GIAYTHETHAO"."ORDERDETAILS"            7.937 KB      46 rows
+. . exported "BTL_GIAYTHETHAO"."SUPPLIERS"               7.296 KB       5 rows
+. . exported "BTL_GIAYTHETHAO"."CATEGORIES"              6.460 KB       8 rows
+. . exported "BTL_GIAYTHETHAO"."BRANDS"                  6.187 KB      10 rows
+. . exported "BTL_GIAYTHETHAO"."COLORS"                  5.640 KB       8 rows
+. . exported "BTL_GIAYTHETHAO"."SIZES"                   5.664 KB       9 rows
+Master table "SYSTEM"."SYS_EXPORT_SCHEMA_01" successfully loaded/unloaded
+******************************************************************************
+Dump file set for SYSTEM.SYS_EXPORT_SCHEMA_01 is:
+  G:\0CODE\ORACLE\BTL\ORACLE_BACKUP\BTL_GIAYTHETHAO.DMP
+Job "SYSTEM"."SYS_EXPORT_SCHEMA_01" successfully completed at Sun Nov 8 23:12:11 2026 elapsed 0 00:00:40

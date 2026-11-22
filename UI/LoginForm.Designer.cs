@@ -1,5 +1,5 @@
 #nullable enable
-namespace ShoeStore.WinForms.UI;
+namespace QuanLyBanGiay;
 
 partial class LoginForm
 {
@@ -24,7 +24,7 @@ partial class LoginForm
         ClientSize = new Size(460, 440); BackColor = Color.White; Font = new Font("Segoe UI", 10F);
         heading.AutoSize = true; heading.Font = new Font("Segoe UI", 22F, FontStyle.Bold); heading.ForeColor = Color.FromArgb(30, 58, 84);
         heading.Location = new Point(42, 34); heading.Text = "SHOESTORE";
-        intro.Location = new Point(44, 83); intro.Size = new Size(365, 42); intro.Text = "Đăng nhập để quản lý bán hàng và kho giày.";
+        intro.Location = new Point(44, 83); intro.Size = new Size(365, 54); intro.Text = "Đăng nhập để quản lý bán hàng và kho giày.";
         userLabel.AutoSize = true; userLabel.Location = new Point(44, 143); userLabel.Text = "Tên đăng nhập";
         username.Location = new Point(44, 168); username.Size = new Size(370, 30); username.MaxLength = 40;
         passwordLabel.AutoSize = true; passwordLabel.Location = new Point(44, 214); passwordLabel.Text = "Mật khẩu";
@@ -43,3 +43,4 @@ partial class LoginForm
         base.Dispose(disposing);
     }
 }
+

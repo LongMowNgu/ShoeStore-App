@@ -1,6 +1,6 @@
 using System.Runtime.Versioning;
 
-namespace ShoeStore.WinForms;
+namespace QuanLyBanGiay;
 
 [SupportedOSPlatform("windows")]
 internal static class Program
@@ -11,10 +11,20 @@ internal static class Program
         ApplicationConfiguration.Initialize();
         while (true)
         {
-            using var login = new ShoeStore.WinForms.UI.LoginForm();
-            if (login.ShowDialog() != DialogResult.OK || login.Session is null) return;
-            using var main = new ShoeStore.WinForms.UI.MainForm(login.Session);
-            if (main.ShowDialog() != DialogResult.Retry) return;
+            using var login = new QuanLyBanGiay.LoginForm();
+            if (login.ShowDialog() != DialogResult.OK || login.Session is null)
+            {
+                QuanLyBanGiay.OracleConnectionFactory.ClearCredentials();
+                return;
+            }
+            using var main = new QuanLyBanGiay.MainForm(login.Session);
+            if (main.ShowDialog() != DialogResult.Retry)
+            {
+                QuanLyBanGiay.OracleConnectionFactory.ClearCredentials();
+                return;
+            }
+            QuanLyBanGiay.OracleConnectionFactory.ClearCredentials();
         }
     }
 }
+

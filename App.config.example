@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration>
+  <appSettings>
+    <add key="OracleSchemaOwner" value="BTL_GIAYTHE_TEST" />
+  </appSettings>
+  <connectionStrings>
+    <add name="Oracle"
+         providerName="Oracle.ManagedDataAccess.Client"
+         connectionString="User Id=CHANGE_AT_LOGIN;Password=CHANGE_AT_LOGIN;Data Source=localhost:1521/ORCLPDB;" />
+  </connectionStrings>
+</configuration>

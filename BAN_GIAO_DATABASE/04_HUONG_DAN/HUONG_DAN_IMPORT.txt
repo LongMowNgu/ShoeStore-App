@@ -1,0 +1,58 @@
+HUONG DAN IMPORT SCHEMA BTL_GIAYTHETHAO
+========================================
+
+A. Phan biet schema chu so huu va tai khoan ung dung
+- BTL_GIAYTHETHAO la schema chu so huu 12 bang va cac doi tuong du an.
+- QL_GIAYTHE va NV_GIAYTHE la tai khoan dang nhap cua ung dung Windows Forms.
+  Hai tai khoan nay KHONG phai schema chu so huu; quyen du lieu den tu role duoc gan.
+- File export la schema-mode, khong phai FULL export. Khong gia dinh file dump
+  tao lai cac role va tai khoan ung dung. Tao role/user ung dung va cap quyen
+  bang cac file SQL rieng trong bo ban giao.
+- export.log co ghi metadata cua schema owner. Kiem tra schema owner tren dich;
+  neu chua co, DBA tao/provision owner truoc khi import.
+
+B. Cac buoc tren may Oracle dich
+1. Xac nhan Oracle Database va cong cu Data Pump tren may dich. Xac minh host,
+   cong 1521 (neu dung), va SERVICE_NAME dang duoc listener cong bo. Khong mac
+   dinh ten service tren may dich la ORCL/orcl.
+2. Dat BTL_GIAYTHETHAO.dmp tren may chu Oracle dich. Oracle DIRECTORY la doi
+   tuong phia database server: thu muc vat ly phai ton tai va Oracle service
+   account phai co quyen doc file DMP, ghi file log.
+3. DBA tao Oracle DIRECTORY tro den thu muc chua DMP, vi du:
+     CREATE OR REPLACE DIRECTORY GIAYTHE_IMPORT AS 'D:\ORACLE_IMPORT';
+   Duong dan tren la vi du; thay bang duong dan thuc te tren MAY CHU Oracle dich.
+   Gan quyen READ, WRITE tren directory cho tai khoan se chay Data Pump theo
+   chinh sach cua may dich. DIRECTORY khong phai duong dan tren may client.
+4. Kiem tra schema owner BTL_GIAYTHETHAO. Neu chua ton tai, DBA tao schema voi
+   mat khau moi va default tablespace/quota duoc chon cho may dich, vi du mau:
+     CREATE USER BTL_GIAYTHETHAO IDENTIFIED BY "<MAT_KHAU_MOI>"
+       DEFAULT TABLESPACE <TABLESPACE_DICH>
+       QUOTA <QUOTA_DICH> ON <TABLESPACE_DICH>;
+   Thay tat ca placeholder theo cau hinh va chinh sach dich; khong dung nguyen
+   placeholder. Khong dung tai khoan QL_GIAYTHE/NV_GIAYTHE lam owner.
+5. Chay 02_PHAN_QUYEN\01_TAO_ROLE_USER.sql tren DATABASE dich de tao role va
+   hai tai khoan ung dung. Script dung mat khau demo da ghi trong yeu cau; doi
+   mat khau theo chinh sach may dich truoc khi dua vao su dung that. Khong chay
+   file nay tren database nguon hien tai, noi cac user va role da ton tai.
+6. Import vao schema cung ten (khong can REMAP_SCHEMA):
+     impdp system@<SERVICE_NAME_DICH> SCHEMAS=BTL_GIAYTHETHAO DIRECTORY=GIAYTHE_IMPORT DUMPFILE=BTL_GIAYTHETHAO.dmp LOGFILE=import.log
+   Nhap mat khau SYSTEM tai prompt; khong ghi mat khau vao lenh, script hoac tai lieu.
+   Neu schema dich da co du lieu/doi tuong, sao luu truoc va danh gia cach xu ly;
+   khong import de ghi de khi chua co ke hoach ro rang.
+7. Neu import sang schema ten khac, dung REMAP_SCHEMA, vi du:
+     REMAP_SCHEMA=BTL_GIAYTHETHAO:<SCHEMA_DICH>
+   Tao schema dich va cap tablespace/quota truoc. Kiem tra lai cac tham chieu,
+   grants va ung dung sau khi remap.
+8. Sau khi import thanh cong, chay 02_PHAN_QUYEN\02_CAP_QUYEN.sql.
+9. Chay 03_KIEM_TRA\03_KIEM_TRA_ROLE.sql va
+   03_KIEM_TRA\04_KIEM_TRA_DU_LIEU.sql bang tai khoan co quyen doc cac DBA views.
+10. Kiem tra dang nhap ung dung bang QL_GIAYTHE va NV_GIAYTHE. Xac nhan role
+    da enable va thao tac phu hop voi pham vi quyen.
+
+C. Luu y
+- Khong chay file tao user/role tren database nguon; cac user va role da ton tai.
+- Khong chay import thu vao schema chinh tren database nguon.
+- File dump la schema export, khong phai ban FULL database; khong xem no la ban
+  sao cua cac role/tai khoan ung dung. Tao va gan quyen ung dung bang cac SQL rieng.
+- Khong co import thu tren may dich trong qua trinh dong goi nay.
+

@@ -1,0 +1,22 @@
+-- Tao role va tai khoan ung dung tren DATABASE DICH.
+-- KHONG chay tren database nguon: cac user/role nguon da ton tai.
+-- Schema chu so huu BTL_GIAYTHETHAO duoc tao rieng (xem HUONG_DAN_IMPORT.txt).
+-- Tai khoan ung dung chi nhan CREATE SESSION va role; khong cap DBA/system privilege.
+-- Khong dat quota cho user ung dung vi cac tai khoan nay chi thao tac tren bang cua schema chu so huu.
+
+CREATE ROLE RL_GIAYTHE_QUANLY;
+CREATE ROLE RL_GIAYTHE_NHANVIEN;
+
+CREATE USER QL_GIAYTHE IDENTIFIED BY "QuanLy@2026"
+  DEFAULT TABLESPACE USERS;
+CREATE USER NV_GIAYTHE IDENTIFIED BY "NhanVien@2026"
+  DEFAULT TABLESPACE USERS;
+
+GRANT CREATE SESSION TO QL_GIAYTHE;
+GRANT CREATE SESSION TO NV_GIAYTHE;
+
+GRANT RL_GIAYTHE_QUANLY TO QL_GIAYTHE;
+GRANT RL_GIAYTHE_NHANVIEN TO NV_GIAYTHE;
+
+ALTER USER QL_GIAYTHE DEFAULT ROLE RL_GIAYTHE_QUANLY;
+ALTER USER NV_GIAYTHE DEFAULT ROLE RL_GIAYTHE_NHANVIEN;

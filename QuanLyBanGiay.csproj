@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <RootNamespace>QuanLyBanGiay</RootNamespace>
+    <AssemblyName>QuanLyBanGiay</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Update="UI\LoginForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Update="UI\LoginForm.Designer.cs"><DependentUpon>LoginForm.cs</DependentUpon></Compile>
+    <Compile Update="UI\MainForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Update="UI\MainForm.Designer.cs"><DependentUpon>MainForm.cs</DependentUpon></Compile>
+    <Compile Update="UI\ProductsForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Update="UI\ProductsForm.Designer.cs"><DependentUpon>ProductsForm.cs</DependentUpon></Compile>
+    <Compile Update="UI\PosForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Update="UI\PosForm.Designer.cs"><DependentUpon>PosForm.cs</DependentUpon></Compile>
+    <Compile Update="UI\ReceiptForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Update="UI\ReceiptForm.Designer.cs"><DependentUpon>ReceiptForm.cs</DependentUpon></Compile>
+    <Compile Update="UI\InventoryForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Update="UI\InventoryForm.Designer.cs"><DependentUpon>InventoryForm.cs</DependentUpon></Compile>
+    <Compile Update="UI\OnlineOrdersForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Update="UI\OnlineOrdersForm.Designer.cs"><DependentUpon>OnlineOrdersForm.cs</DependentUpon></Compile>
+    <Compile Update="UI\ReportsForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Update="UI\ReportsForm.Designer.cs"><DependentUpon>ReportsForm.cs</DependentUpon></Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="UI\LoginForm.resx"><DependentUpon>LoginForm.cs</DependentUpon></EmbeddedResource>
+    <EmbeddedResource Update="UI\MainForm.resx"><DependentUpon>MainForm.cs</DependentUpon></EmbeddedResource>
+    <EmbeddedResource Update="UI\ProductsForm.resx"><DependentUpon>ProductsForm.cs</DependentUpon></EmbeddedResource>
+    <EmbeddedResource Update="UI\PosForm.resx"><DependentUpon>PosForm.cs</DependentUpon></EmbeddedResource>
+    <EmbeddedResource Update="UI\ReceiptForm.resx"><DependentUpon>ReceiptForm.cs</DependentUpon></EmbeddedResource>
+    <EmbeddedResource Update="UI\InventoryForm.resx"><DependentUpon>InventoryForm.cs</DependentUpon></EmbeddedResource>
+    <EmbeddedResource Update="UI\OnlineOrdersForm.resx"><DependentUpon>OnlineOrdersForm.cs</DependentUpon></EmbeddedResource>
+    <EmbeddedResource Update="UI\ReportsForm.resx"><DependentUpon>ReportsForm.cs</DependentUpon></EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.26.400" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
+  </ItemGroup>
+</Project>
+
+
+
+

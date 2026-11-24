@@ -78,14 +78,26 @@ internal sealed class CustomerEmployeeForm : Form
     private void SaveCustomer(bool update)
     {
         _actor.Require("MANAGER"); var id = SelectedId(_customers); if (update && id is null) { Warn("Chọn khách hàng cần cập nhật."); return; }
-        var name = _customerFields[0].Text.Trim(); var phone = _customerFields[1].Text.Trim(); if (name.Length == 0 || phone.Length == 0) { Warn("Họ tên và số điện thoại là bắt buộc."); return; }
+        var name = _customerFields[0].Text.Trim(); var phone = _customerFields[1].Text.Trim(); var email = Db(_customerFields[2].Text); var address = Db(_customerFields[3].Text); if (name.Length == 0 || phone.Length == 0) { Warn("Họ tên và số điện thoại là bắt buộc."); return; }
         try
         {
             using var c=OracleConnectionFactory.Create(); c.Open(); using var tx=c.BeginTransaction();
-            if(update) { using var q=c.CreateCommand(); q.Transaction=tx; q.BindByName=true; q.CommandText="UPDATE Customers SET FullName=:name,Phone=:phone,Email=:email,Address=:address WHERE CustomerID=:id"; Param(q,"name",OracleDbType.Varchar2,name); Param(q,"phone",OracleDbType.Varchar2,phone); Param(q,"email",OracleDbType.Varchar2,Db(_customerFields[2].Text)); Param(q,"address",OracleDbType.Varchar2,Db(_customerFields[3].Text)); Param(q,"id",OracleDbType.Int32,id!.Value); q.ExecuteNonQuery(); }
-            else { SalesService.Lock(c,tx,"Customers"); using var q=c.CreateCommand(); q.Transaction=tx; q.BindByName=true; q.CommandText="SELECT NVL(MAX(CustomerID),0)+1 FROM Customers"; var next=Convert.ToInt32(q.ExecuteScalar()); q.CommandText="INSERT INTO Customers(CustomerID,FullName,Phone,Email,Address,RegisterDate) VALUES(:id,:name,:phone,:email,:address,SYSDATE)"; Param(q,"id",OracleDbType.Int32,next); Param(q,"name",OracleDbType.Varchar2,name); Param(q,"phone",OracleDbType.Varchar2,phone); Param(q,"email",OracleDbType.Varchar2,Db(_customerFields[2].Text)); Param(q,"address",OracleDbType.Varchar2,Db(_customerFields[3].Text)); q.ExecuteNonQuery(); }
+            if (CustomerAlreadyExists(c, tx, phone, email, update ? id : null)) { tx.Rollback(); Warn("Số điện thoại hoặc email đã được khách hàng khác sử dụng."); return; }
+            if(update) { using var q=c.CreateCommand(); q.Transaction=tx; q.BindByName=true; q.CommandText="UPDATE Customers SET FullName=:name,Phone=:phone,Email=:email,Address=:address WHERE CustomerID=:id"; Param(q,"name",OracleDbType.Varchar2,name); Param(q,"phone",OracleDbType.Varchar2,phone); Param(q,"email",OracleDbType.Varchar2,email); Param(q,"address",OracleDbType.Varchar2,address); Param(q,"id",OracleDbType.Int32,id!.Value); q.ExecuteNonQuery(); }
+            else { SalesService.Lock(c,tx,"Customers"); using var q=c.CreateCommand(); q.Transaction=tx; q.BindByName=true; q.CommandText="SELECT NVL(MAX(CustomerID),0)+1 FROM Customers"; var next=Convert.ToInt32(q.ExecuteScalar()); q.CommandText="INSERT INTO Customers(CustomerID,FullName,Phone,Email,Address,RegisterDate) VALUES(:id,:name,:phone,:email,:address,SYSDATE)"; Param(q,"id",OracleDbType.Int32,next); Param(q,"name",OracleDbType.Varchar2,name); Param(q,"phone",OracleDbType.Varchar2,phone); Param(q,"email",OracleDbType.Varchar2,email); Param(q,"address",OracleDbType.Varchar2,address); q.ExecuteNonQuery(); }
             tx.Commit(); ReloadCustomers(); MessageBox.Show("Đã lưu khách hàng.", "Hoàn tất", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        } catch(Exception e) { ShowError(e); }
+        } catch(OracleException e) when (e.Number == 1) { Warn("Số điện thoại hoặc email đã được khách hàng khác sử dụng."); }
+        catch(Exception e) { ShowError(e); }
+    }
+
+    private static bool CustomerAlreadyExists(OracleConnection c, OracleTransaction tx, string phone, object email, int? excludeId)
+    {
+        using var q = c.CreateCommand(); q.Transaction = tx; q.BindByName = true;
+        q.CommandText = "SELECT COUNT(*) FROM Customers WHERE (Phone=:customer_phone OR (:customer_email IS NOT NULL AND Email=:customer_email)) AND (:exclude_customer_id IS NULL OR CustomerID<>:exclude_customer_id)";
+        Param(q, "customer_phone", OracleDbType.Varchar2, phone);
+        Param(q, "customer_email", OracleDbType.Varchar2, email);
+        Param(q, "exclude_customer_id", OracleDbType.Int32, (object?)excludeId ?? DBNull.Value);
+        return Convert.ToInt32(q.ExecuteScalar()) > 0;
     }
 
     private void SaveEmployee(bool update)

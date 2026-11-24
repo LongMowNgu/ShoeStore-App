@@ -28,9 +28,10 @@ public partial class OnlineOrdersForm : Form
         phone.PlaceholderText = "Số điện thoại khách đã đăng ký";
         statusFilter.Items.Clear(); statusFilter.Items.AddRange(new object[] { "Tất cả trạng thái", "Chờ xác nhận", "Đang giao", "Hoàn tất", "Đã hủy" }); statusFilter.SelectedIndex = 0;
         status.Items.Clear(); status.Items.AddRange(new object[] { "Đang giao", "Hoàn tất", "Đã hủy" });
-        assignmentTab.Enabled=false; historyTab.Enabled=false; assignButton.Visible=false;
+        assignButton.Visible = _actor.IsManager;
+        assignee.Enabled = _actor.IsManager;
         if(!_actor.IsManager){ saveStatus.Visible=false; status.Visible=false; note.Visible=false; }
-        Load += (_, _) => { LoadVariants(); Reload(); };
+        Load += (_, _) => { LoadVariants(); LoadStaff(); Reload(); };
     }
 
     private void ordersGrid_SelectionChanged(object? sender, EventArgs e)
@@ -47,7 +48,10 @@ public partial class OnlineOrdersForm : Form
         var orderStatus = Convert.ToString(row["ORDER_STATUS"]) ?? string.Empty;
         statusLabel.Text = $"Đơn {orderCode} · {StatusDisplay(orderStatus)}.";
         statusLabel.ForeColor = Color.FromArgb(91, 107, 126);
-        assignmentInfo.Text = "Database mới không lưu thông tin phân công đơn.";
+        assignmentInfo.Text = Convert.ToString(row["ASSIGNED_TO"]) is { Length: > 0 } assigneeName
+            ? $"Nhân viên phụ trách: {assigneeName}"
+            : "Đơn hàng chưa được phân công.";
+        if (detailsTabs.SelectedTab == historyTab) LoadHistory(_orderId.Value);
     }
 
     private void filterOrders_Click(object? sender, EventArgs e) => Reload();
@@ -190,6 +194,8 @@ public partial class OnlineOrdersForm : Form
             {
                 if (row.Cells["OLD_STATUS"].Value is string oldCode) row.Cells["OLD_STATUS"].Value = StatusDisplay(oldCode);
                 if (row.Cells["NEW_STATUS"].Value is string newCode) row.Cells["NEW_STATUS"].Value = StatusDisplay(newCode);
+                if (row.Cells["EVENT_TYPE"].Value is string eventType)
+                    row.Cells["EVENT_TYPE"].Value = eventType switch { "CREATED" => "Tạo đơn", "STATUS" => "Đổi trạng thái", "ASSIGNED" => "Phân công", "BASELINE" => "Ghi nhận ban đầu", _ => eventType };
             }
         }
         catch (Exception ex) { ShowStatus("Không tải được lịch sử đơn: " + ex.Message, true); }
@@ -233,14 +239,28 @@ internal sealed class OrderService
     public DataTable List(string? status=null,string keyword="")
     {
         using var c=OracleConnectionFactory.Create();using var q=c.CreateCommand();q.BindByName=true;
-        q.CommandText="SELECT o.OrderID AS ORDER_ID,TO_CHAR(o.OrderID) AS ORDER_CODE,c.FullName AS CUSTOMER_NAME,c.Phone AS CUSTOMER_PHONE,c.Address AS SHIPPING_ADDRESS,o.Status AS ORDER_STATUS,0 AS STOCK_RESERVED,CAST(NULL AS VARCHAR2(100)) AS ASSIGNED_TO,o.OrderDate AS CREATED_AT,o.TotalAmount AS TOTAL_AMOUNT FROM Orders o JOIN Customers c ON c.CustomerID=o.CustomerID WHERE (:s IS NULL OR UPPER(o.Status)=UPPER(:s)) AND (:q IS NULL OR TO_CHAR(o.OrderID) LIKE '%'||:q||'%' OR UPPER(c.FullName) LIKE '%'||UPPER(:q)||'%' OR c.Phone LIKE '%'||:q||'%') ORDER BY o.OrderDate DESC";
+        q.CommandText="SELECT o.OrderID AS ORDER_ID,TO_CHAR(o.OrderID) AS ORDER_CODE,c.FullName AS CUSTOMER_NAME,c.Phone AS CUSTOMER_PHONE,c.Address AS SHIPPING_ADDRESS,o.Status AS ORDER_STATUS,0 AS STOCK_RESERVED,a.EmployeeID AS ASSIGNED_TO_USER_ID,e.FullName AS ASSIGNED_TO,o.OrderDate AS CREATED_AT,o.TotalAmount AS TOTAL_AMOUNT FROM Orders o JOIN Customers c ON c.CustomerID=o.CustomerID LEFT JOIN OrderAssignments a ON a.OrderID=o.OrderID LEFT JOIN Employees e ON e.EmployeeID=a.EmployeeID WHERE (:s IS NULL OR UPPER(o.Status)=UPPER(:s)) AND (:q IS NULL OR TO_CHAR(o.OrderID) LIKE '%'||:q||'%' OR UPPER(c.FullName) LIKE '%'||UPPER(:q)||'%' OR c.Phone LIKE '%'||:q||'%') ORDER BY o.OrderDate DESC";
         q.Parameters.Add("s",OracleDbType.Varchar2).Value=string.IsNullOrWhiteSpace(status)?DBNull.Value:status;
         q.Parameters.Add("q",OracleDbType.NVarchar2,150).Value=string.IsNullOrWhiteSpace(keyword)?DBNull.Value:keyword.Trim();var dt=new DataTable();using var a=new OracleDataAdapter(q);a.Fill(dt);return dt;
     }
     public DataTable OrderableVariants(){using var c=OracleConnectionFactory.Create();using var q=c.CreateCommand();q.CommandText="SELECT v.VariantID AS VARIANT_ID,TO_CHAR(v.VariantID) AS SKU,p.ProductName||' / '||sz.SizeValue||' / '||cl.ColorName AS ITEM,p.Price AS SELL_PRICE,v.StockQuantity AS STOCK_QTY FROM ProductVariants v JOIN Products p ON p.ProductID=v.ProductID JOIN Sizes sz ON sz.SizeID=v.SizeID JOIN Colors cl ON cl.ColorID=v.ColorID WHERE p.Status='Active' ORDER BY p.ProductName,sz.SizeValue,cl.ColorName";var d=new DataTable();using var a=new OracleDataAdapter(q);a.Fill(d);return d;}
-    public DataTable AssignableStaff()=>new DataTable();
-    public DataTable History(int orderId)=>new DataTable();
-    public void Assign(UserSession actor,int orderId,int assigneeUserId)=>throw new NotSupportedException("Schema mới không lưu tài khoản liên kết hoặc phân công đơn hàng.");
+    public DataTable AssignableStaff(){using var c=OracleConnectionFactory.Create();using var q=c.CreateCommand();q.CommandText="SELECT EmployeeID AS USER_ID,FullName||' · '||Position AS DISPLAY_NAME FROM Employees ORDER BY FullName";var d=new DataTable();using var a=new OracleDataAdapter(q);a.Fill(d);return d;}
+    public DataTable History(int orderId){using var c=OracleConnectionFactory.Create();using var q=c.CreateCommand();q.BindByName=true;q.CommandText="SELECT HistoryID AS HISTORY_ID,ChangedAt AS CHANGED_AT,EventType AS EVENT_TYPE,OldStatus AS OLD_STATUS,NewStatus AS NEW_STATUS,Note AS NOTE,ChangedBy AS CHANGED_BY FROM OrderHistory WHERE OrderID=:id ORDER BY ChangedAt DESC,HistoryID DESC";q.Parameters.Add("id",OracleDbType.Int32).Value=orderId;var d=new DataTable();using var a=new OracleDataAdapter(q);a.Fill(d);return d;}
+    public void Assign(UserSession actor,int orderId,int assigneeEmployeeId)
+    {
+        actor.Require("MANAGER");using var c=OracleConnectionFactory.Create();c.Open();using var tx=c.BeginTransaction();
+        try
+        {
+            string orderStatus;using(var q=c.CreateCommand()){q.Transaction=tx;q.BindByName=true;q.CommandText="SELECT Status FROM Orders WHERE OrderID=:id FOR UPDATE";q.Parameters.Add("id",OracleDbType.Int32).Value=orderId;var result=q.ExecuteScalar();if(result is null or DBNull)throw new InvalidOperationException("Không tìm thấy đơn hàng.");orderStatus=Convert.ToString(result)!;}
+            if(orderStatus is "Completed" or "Cancelled")throw new InvalidOperationException("Không thể phân công đơn đã hoàn tất hoặc đã hủy.");
+            string employeeName;using(var q=c.CreateCommand()){q.Transaction=tx;q.BindByName=true;q.CommandText="SELECT FullName FROM Employees WHERE EmployeeID=:id";q.Parameters.Add("id",OracleDbType.Int32).Value=assigneeEmployeeId;var result=q.ExecuteScalar();if(result is null or DBNull)throw new InvalidOperationException("Không tìm thấy nhân viên được chọn.");employeeName=Convert.ToString(result)!;}
+            int? previous=null;using(var q=c.CreateCommand()){q.Transaction=tx;q.BindByName=true;q.CommandText="SELECT EmployeeID FROM OrderAssignments WHERE OrderID=:id FOR UPDATE";q.Parameters.Add("id",OracleDbType.Int32).Value=orderId;var result=q.ExecuteScalar();if(result is not null and not DBNull)previous=Convert.ToInt32(result);}
+            if(previous==assigneeEmployeeId)throw new InvalidOperationException("Đơn đã được giao cho nhân viên này.");
+            using(var q=c.CreateCommand()){q.Transaction=tx;q.BindByName=true;if(previous.HasValue){q.CommandText="UPDATE OrderAssignments SET EmployeeID=:employee,AssignedAt=SYSDATE,AssignedBy=:actor WHERE OrderID=:orderId";}else{q.CommandText="INSERT INTO OrderAssignments(OrderID,EmployeeID,AssignedAt,AssignedBy) VALUES(:orderId,:employee,SYSDATE,:actor)";}q.Parameters.Add("employee",OracleDbType.Int32).Value=assigneeEmployeeId;q.Parameters.Add("actor",OracleDbType.Varchar2,128).Value=actor.Username;q.Parameters.Add("orderId",OracleDbType.Int32).Value=orderId;q.ExecuteNonQuery();}
+            InsertHistory(c,tx,orderId,"ASSIGNED",null,null,$"Phân công cho {employeeName}.",actor.Username,previous,assigneeEmployeeId);tx.Commit();
+        }
+        catch{tx.Rollback();throw;}
+    }
     public string Create(UserSession actor,string customerName,string phone,string address,int variantId,int quantity)
     {
         actor.Require("EMPLOYEE","MANAGER");if(quantity<=0)throw new ArgumentException("Số lượng phải lớn hơn 0.");if(string.IsNullOrWhiteSpace(phone))throw new ArgumentException("Nhập số điện thoại khách đã có trong bảng Customers.");
@@ -252,6 +272,7 @@ internal sealed class OrderService
             SalesService.Lock(c,tx,"Orders");SalesService.Lock(c,tx,"OrderDetails");SalesService.Lock(c,tx,"Payments");
             var total=price*quantity;int oid,did,pid;using(var q=c.CreateCommand()){q.Transaction=tx;q.CommandText="SELECT NVL(MAX(OrderID),0)+1 FROM Orders";oid=Convert.ToInt32(q.ExecuteScalar());q.CommandText="SELECT NVL(MAX(OrderDetailID),0)+1 FROM OrderDetails";did=Convert.ToInt32(q.ExecuteScalar());q.CommandText="SELECT NVL(MAX(PaymentID),0)+1 FROM Payments";pid=Convert.ToInt32(q.ExecuteScalar());}
             using(var q=c.CreateCommand()){q.Transaction=tx;q.BindByName=true;q.CommandText="INSERT INTO Orders(OrderID,CustomerID,EmployeeID,OrderDate,Status,TotalAmount) VALUES(:id,:cust,NULL,SYSDATE,'Pending',:total)";q.Parameters.Add("id",OracleDbType.Int32).Value=oid;q.Parameters.Add("cust",OracleDbType.Int32).Value=customerId;q.Parameters.Add("total",OracleDbType.Decimal).Value=total;q.ExecuteNonQuery();}
+            InsertHistory(c,tx,oid,"CREATED",null,"Pending","Tạo đơn trực tuyến.",actor.Username);
             using(var q=c.CreateCommand()){q.Transaction=tx;q.BindByName=true;q.CommandText="INSERT INTO OrderDetails(OrderDetailID,OrderID,VariantID,Quantity,UnitPrice) VALUES(:id,:ord,:var,:qty,:price)";q.Parameters.Add("id",OracleDbType.Int32).Value=did;q.Parameters.Add("ord",OracleDbType.Int32).Value=oid;q.Parameters.Add("var",OracleDbType.Int32).Value=variantId;q.Parameters.Add("qty",OracleDbType.Int32).Value=quantity;q.Parameters.Add("price",OracleDbType.Decimal).Value=price;q.ExecuteNonQuery();}
             using(var q=c.CreateCommand()){q.Transaction=tx;q.BindByName=true;q.CommandText="INSERT INTO Payments(PaymentID,OrderID,PaymentMethod,Amount,PaymentDate,Status) VALUES(:id,:ord,'Cash',:amount,NULL,'Unpaid')";q.Parameters.Add("id",OracleDbType.Int32).Value=pid;q.Parameters.Add("ord",OracleDbType.Int32).Value=oid;q.Parameters.Add("amount",OracleDbType.Decimal).Value=total;q.ExecuteNonQuery();}
             tx.Commit();return oid.ToString();
@@ -299,8 +320,15 @@ internal sealed class OrderService
                 }
             }
             using(var q=c.CreateCommand()){q.Transaction=tx;q.BindByName=true;q.CommandText="UPDATE Orders SET Status=:status WHERE OrderID=:id";q.Parameters.Add("status",OracleDbType.Varchar2,15).Value=newStatus;q.Parameters.Add("id",OracleDbType.Int32).Value=orderId;q.ExecuteNonQuery();}
+            InsertHistory(c,tx,orderId,"STATUS",oldStatus,newStatus,string.IsNullOrWhiteSpace(note)?null:note.Trim(),actor.Username);
             tx.Commit();
         }
         catch{tx.Rollback();throw;}
+    }
+    private static void InsertHistory(OracleConnection c,OracleTransaction tx,int orderId,string eventType,string? oldStatus,string? newStatus,string? note,string actor,int? oldEmployee=null,int? newEmployee=null)
+    {
+        SalesService.Lock(c,tx,"OrderHistory");int historyId;using(var next=c.CreateCommand()){next.Transaction=tx;next.CommandText="SELECT NVL(MAX(HistoryID),0)+1 FROM OrderHistory";historyId=Convert.ToInt32(next.ExecuteScalar());}
+        using var q=c.CreateCommand();q.Transaction=tx;q.BindByName=true;q.CommandText="INSERT INTO OrderHistory(HistoryID,OrderID,ChangedAt,EventType,OldStatus,NewStatus,OldEmployeeID,NewEmployeeID,Note,ChangedBy) VALUES(:historyId,:orderId,SYSDATE,:eventType,:oldStatus,:newStatus,:oldEmployee,:newEmployee,:note,:actor)";
+        q.Parameters.Add("historyId",OracleDbType.Int32).Value=historyId;q.Parameters.Add("orderId",OracleDbType.Int32).Value=orderId;q.Parameters.Add("eventType",OracleDbType.Varchar2,20).Value=eventType;q.Parameters.Add("oldStatus",OracleDbType.Varchar2,15).Value=(object?)oldStatus??DBNull.Value;q.Parameters.Add("newStatus",OracleDbType.Varchar2,15).Value=(object?)newStatus??DBNull.Value;q.Parameters.Add("oldEmployee",OracleDbType.Int32).Value=(object?)oldEmployee??DBNull.Value;q.Parameters.Add("newEmployee",OracleDbType.Int32).Value=(object?)newEmployee??DBNull.Value;q.Parameters.Add("note",OracleDbType.NVarchar2,500).Value=(object?)note??DBNull.Value;q.Parameters.Add("actor",OracleDbType.Varchar2,128).Value=actor;q.ExecuteNonQuery();
     }
 }

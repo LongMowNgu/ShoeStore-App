@@ -60,7 +60,7 @@ internal sealed class InvoiceRepository
     public DataTable FindInvoice(string code)
     {
         using var c = OracleConnectionFactory.Create(); using var cmd = c.CreateCommand(); cmd.BindByName = true;
-        cmd.CommandText = "SELECT o.OrderID AS INVOICE_ID,TO_CHAR(o.OrderID) AS INVOICE_CODE,o.OrderDate AS CREATED_AT,o.TotalAmount AS TOTAL_AMOUNT,c.FullName FROM Orders o JOIN Customers c ON c.CustomerID=o.CustomerID WHERE o.OrderID=:id";
+        cmd.CommandText = "SELECT o.OrderID AS INVOICE_ID,TO_CHAR(o.OrderID) AS INVOICE_CODE,o.OrderDate AS CREATED_AT,o.TotalAmount AS TOTAL_AMOUNT,c.FullName AS FULL_NAME FROM Orders o JOIN Customers c ON c.CustomerID=o.CustomerID WHERE o.OrderID=:id";
         cmd.Parameters.Add("id", OracleDbType.Int32).Value = int.Parse(code); var dt = new DataTable(); using var a = new OracleDataAdapter(cmd); a.Fill(dt); return dt;
     }
 

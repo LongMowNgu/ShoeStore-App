@@ -4,8 +4,9 @@
 
 ## Trạng thái hiện tại
 
-- Schema test có 12 bảng và dữ liệu mẫu; lần chạy vừa xác nhận tạo được 130 sản phẩm, 1.300 biến thể, 30 đơn, 46 chi tiết đơn và 28 thanh toán. Dùng script `Database/TestData/04_KIEM_TRA_DU_LIEU_MAU.sql` để xem số dòng đang có.
-- Visual Studio build được ứng dụng với 0 cảnh báo và 0 lỗi.
+- Schema gồm 12 bảng nghiệp vụ cốt lõi và hai bảng mở rộng `OrderAssignments`, `OrderHistory`. Schema test hiện có 130 sản phẩm, 1.300 biến thể, 34 đơn, 50 chi tiết đơn, 32 thanh toán và 34 mốc lịch sử ban đầu. Số đơn có thể thay đổi khi demo. Dùng `Database/TestData/04_KIEM_TRA_DU_LIEU_MAU.sql` để xem số dòng mới nhất.
+- Bản cập nhật gần nhất build thành công với 0 cảnh báo và 0 lỗi.
+- Migration phân công/lịch sử đã được áp dụng trên schema test `BTL_GIAYTHE_TEST`. Trên schema mới hoặc schema DMP, cần chạy migration và cấp quyền như mô tả bên dưới.
 - Nếu PDB vẫn ở `RESTRICTED=YES`, hai tài khoản ứng dụng phải được cấp `RESTRICTED SESSION` trực tiếp trong PDB. Quyền này chỉ cần khi database còn Restricted; chi tiết ở phần [Oracle đang Restricted](#oracle-dang-restricted).
 - Lỗi đồng bộ user `HR` trong PDB chưa được xử lý; không xóa user `HR` nào. Dữ liệu ứng dụng bán giày nằm trong schema `BTL_GIAYTHE_TEST`, tách khỏi các schema `HR`.
 
@@ -31,7 +32,7 @@ Nếu máy khác dùng service/host/port khác, sửa `Data Source` trong `App.c
 
 1. Đảm bảo Oracle listener và PDB `ORCLPDB` đang chạy `READ WRITE`.
 2. Mở `QuanLyBanGiay.csproj` bằng Visual Studio 2022. Cần workload **.NET desktop development** và .NET 8 SDK.
-3. Mở `App.config`, xác nhận schema là `BTL_GIAYTHE_TEST` và service là service PDB trong SQL Developer.
+3. Mở `App.config`, xác nhận schema là `BTL_GIAYTHE_TEST` và service là service PDB trong SQL Developer. Nhập tên người dùng và mật khẩu Oracle ở màn hình đăng nhập.
 4. Nếu PDB đang Restricted, thực hiện phần [Oracle đang Restricted](#oracle-dang-restricted) trước khi đăng nhập app.
 5. Chọn cấu hình **Debug / Any CPU**, dùng **Build > Build Solution**, sau đó chạy **F5** hoặc **Ctrl+F5**.
 6. Đăng nhập `QL_GIAYTHE` hoặc `NV_GIAYTHE` và mật khẩu tương ứng ở bảng trên.
@@ -76,16 +77,19 @@ Tạo connection riêng trong SQL Developer:
 
 Bấm **Test**, rồi **Connect**. Nếu PDB đang Restricted, trước khi kết nối user này, dùng SYSDBA cấp quyền theo mục [Oracle đang Restricted](#oracle-dang-restricted). User này chỉ sở hữu bảng và chạy setup; không dùng để đăng nhập app.
 
-### 3. Tạo 12 bảng, nạp dữ liệu và cấp object privileges
+### 3. Tạo bảng, nạp dữ liệu và cấp object privileges
 
 Giữ connection `BTL_GIAYTHE_TEST`, lần lượt mở và chạy bằng **F5**:
 
-1. `Database/TestData/02_TAO_BANG_VA_DU_LIEU_MAU.sql` — tạo 12 bảng, ràng buộc và dữ liệu mẫu. Chỉ chạy một lần trên schema trống.
-2. `Database/TestData/03_CAP_QUYEN_TEST.sql` — cấp quyền trên các bảng cho role quản lý/nhân viên. Chạy sau khi 12 bảng được tạo thành công.
-3. `Database/TestData/04_KIEM_TRA_DU_LIEU_MAU.sql` — kiểm tra số dòng và xem mẫu sản phẩm/đơn.
-4. `Database/TestData/05_TRUY_VAN_NGHIEP_VU.sql` — bộ truy vấn đọc, join, nhóm, thống kê và truy vấn lồng phục vụ demo/báo cáo.
+1. `Database/TestData/02_TAO_BANG_VA_DU_LIEU_MAU.sql` — tạo 12 bảng nghiệp vụ và dữ liệu mẫu. Chỉ chạy một lần trên schema trống.
+2. `Database/Migrations/01_ORDER_ASSIGNMENT_HISTORY.sql` — tạo hai bảng mở rộng và ghi một mốc trạng thái ban đầu cho các đơn đã có. Chạy bằng owner schema sau bước 1.
+3. `Database/TestData/03_CAP_QUYEN_TEST.sql` — cấp quyền trên 14 bảng cho role quản lý/nhân viên. Chạy sau migration.
+4. `Database/TestData/04_KIEM_TRA_DU_LIEU_MAU.sql` — kiểm tra số dòng và xem mẫu sản phẩm/đơn.
+5. `Database/TestData/05_TRUY_VAN_NGHIEP_VU.sql` — bộ truy vấn đọc, join, nhóm, thống kê và truy vấn lồng phục vụ demo/báo cáo.
 
 Không chạy `BAN_GIAO_DATABASE/02_PHAN_QUYEN/02_CAP_QUYEN.sql` trên schema test; file đó chỉ dành cho schema `BTL_GIAYTHETHAO` sau khi import DMP.
+
+Nếu schema test đã được tạo từ trước theo phiên bản chỉ có 12 bảng, không chạy lại script tạo bảng. Chạy riêng `Database/Migrations/01_ORDER_ASSIGNMENT_HISTORY.sql` bằng `BTL_GIAYTHE_TEST`, sau đó chạy lại `Database/TestData/03_CAP_QUYEN_TEST.sql` để cấp quyền mới. Nếu ứng dụng báo thiếu bảng hoặc không tải được hai tab, kiểm tra migration và các quyền này trước.
 
 ## Oracle đang Restricted
 
@@ -119,12 +123,15 @@ Trong môi trường hiện tại, Oracle ghi nhận lỗi đồng bộ user `HR
 5. Mở **POS**, chọn khách/nhân viên và biến thể còn hàng, thanh toán. Kiểm tra đơn `Completed`, payment `Paid` và số tồn giảm.
 6. Mở **Báo cáo**, chọn khoảng ngày, xem doanh thu, top bán chạy, tồn bằng 0, đơn theo trạng thái và xuất CSV.
 
+Khi thêm sản phẩm, tên mẫu phải chưa được sử dụng. Trong cùng một mẫu, mỗi cặp kích cỡ/màu chỉ được tạo một lần; nếu đã tồn tại, ứng dụng báo rõ thay vì hiển thị lỗi ràng buộc Oracle.
+
 ### Demo nhân viên và vòng đời đơn online
 
 1. Đăng xuất, đăng nhập `NV_GIAYTHE`; thử xem sản phẩm/dashboard và lập đơn cho số điện thoại khách đã tồn tại.
-2. Đơn mới ở trạng thái `Pending`, payment `Unpaid`; tồn kho chưa bị trừ/giữ.
-3. Đăng nhập lại quản lý, chuyển đơn sang `Shipping`, rồi `Completed`. Khi hoàn tất, app kiểm tra tồn, trừ kho và đánh dấu payment `Paid` trong transaction.
-4. Có thể thử hủy đơn chưa hoàn tất. Trạng thái `Completed`/`Cancelled` là trạng thái cuối; thao tác cập nhật lỗi sẽ rollback transaction.
+2. Đơn mới ở trạng thái `Pending`, payment `Unpaid`; tồn kho chưa bị trừ/giữ. Lịch sử ghi sự kiện tạo đơn.
+3. Đăng nhập quản lý, chọn đơn và tab **Phân công**, chọn nhân viên rồi bấm **Giao cho nhân viên**. Nhân viên phụ trách hiển thị cạnh đơn và sự kiện phân công được thêm vào lịch sử.
+4. Chuyển đơn sang `Shipping`, rồi `Completed`. Tab **Lịch sử** hiển thị trạng thái cũ/mới, ghi chú và tài khoản thực hiện. Khi hoàn tất, app kiểm tra tồn, trừ kho và đánh dấu payment `Paid` trong transaction.
+5. Có thể thử hủy đơn chưa hoàn tất. Trạng thái `Completed`/`Cancelled` là trạng thái cuối; thao tác cập nhật lỗi sẽ rollback transaction.
 
 ## Chức năng đã hoàn thành
 
@@ -135,12 +142,14 @@ Trong môi trường hiện tại, Oracle ghi nhận lỗi đồng bộ user `HR
 - Quản lý tồn theo biến thể, báo cáo doanh thu/top sản phẩm/tồn hết hàng/trạng thái đơn, xuất CSV.
 - Dữ liệu nghiệp vụ đọc/ghi trực tiếp bằng Oracle SQL. Các tham số nhập từ giao diện dùng bind parameters; các luồng ghi chính dùng transaction và rollback khi lỗi.
 
-### Giới hạn đã biết của schema bàn giao
+### Mở rộng schema cho phân công và lịch sử đơn
 
-Schema bàn giao không có cột giữ tồn, lịch sử trạng thái, người phân công, phiếu nhập, giá vốn, lịch sử tồn, liên kết user Oracle với `EmployeeID` hoặc sequence. Vì vậy:
+Schema cốt lõi không có lịch sử trạng thái hoặc phân công đơn. Migration `Database/Migrations/01_ORDER_ASSIGNMENT_HISTORY.sql` bổ sung `OrderAssignments` và `OrderHistory`; chạy bằng user sở hữu schema trước khi cấp quyền và sử dụng hai tab. Các đơn cũ nhận một sự kiện `BASELINE` thể hiện trạng thái tại thời điểm nâng cấp, không giả lập lịch sử trước đó. Khi import DMP bàn giao, chạy migration trên `BTL_GIAYTHETHAO` rồi chạy `02_CAP_QUYEN.sql`.
 
-- Đơn mới không giữ tồn và không ghi audit trail trạng thái.
-- Màn hình không lưu ghi chú/phân công/người xử lý; lịch sử và phân công đơn là phần placeholder, không dùng trong demo.
+Các giới hạn còn lại:
+
+- Đơn mới không giữ tồn; tồn chỉ bị trừ khi quản lý hoàn tất đơn.
+- Phân công dùng hồ sơ nhân viên trong `Employees`, không liên kết tài khoản Oracle với `EmployeeID`.
 - Form tiếp nhận đơn yêu cầu số điện thoại khách đã có; tên/địa chỉ nhập ở form không được lưu vào schema hiện tại.
 - Điều chỉnh tồn chỉ cập nhật `ProductVariants.StockQuantity`; không tạo phiếu nhập. Các ô nhà cung cấp/giá vốn/nhân viên trên form kho không được lưu.
 - `Products.Price` ở cấp mẫu, không phải giá riêng cho từng màu/cỡ; `VariantID` được dùng làm mã biến thể hiển thị.
@@ -151,7 +160,7 @@ Schema bàn giao không có cột giữ tồn, lịch sử trạng thái, ngư�
 | Phần Oracle trong báo cáo/môn học | Ánh xạ trong project | Cách trình bày/demo |
 |---|---|---|
 | Kết nối CDB/PDB, service name | `App.config`, ODP.NET trong `UI/LoginForm.cs` | Chỉ service `ORCLPDB` vào PDB; app không kết nối CDB root để thao tác dữ liệu bán hàng. |
-| Schema, bảng và dữ liệu | `BTL_GIAYTHE_TEST` + `Database/TestData/02...sql`; bản thật ở DMP `BTL_GIAYTHETHAO` | Xem 12 bảng, PK/FK/check/unique constraints và dữ liệu qua SQL Developer. |
+| Schema, bảng và dữ liệu | `BTL_GIAYTHE_TEST` + `Database/TestData/02...sql` + migration; bản thật ở DMP `BTL_GIAYTHETHAO` | Xem 12 bảng cốt lõi, hai bảng phân công/lịch sử, PK/FK/check/unique constraints và dữ liệu qua SQL Developer. |
 | User, role và object privileges | `01_TAO_ROLE_USER.sql`, `03_CAP_QUYEN_TEST.sql`, `02_CAP_QUYEN.sql` | Quản lý/nhân viên nhận quyền khác nhau qua `RL_GIAYTHE_QUANLY` và `RL_GIAYTHE_NHANVIEN`. |
 | Xác thực và phân quyền ứng dụng | `AuthRepository` trong `UI/LoginForm.cs`, `MainForm.Require` | App đọc Oracle user và role đang bật trong `SESSION_ROLES`; POS/kho/báo cáo chỉ cho quản lý. |
 | SQL nghiệp vụ | Các repository/service trong `UI/*.cs`, `05_TRUY_VAN_NGHIEP_VU.sql` | `SELECT`, `JOIN`, `GROUP BY`, hàm tổng hợp, lọc và bind parameters. |
@@ -167,7 +176,7 @@ Schema bàn giao không có cột giữ tồn, lịch sử trạng thái, ngư�
 
 1. Đọc `BAN_GIAO_DATABASE/04_HUONG_DAN/HUONG_DAN_IMPORT.txt` và xác minh database đích.
 2. DBA tạo Oracle `DIRECTORY` trỏ tới thư mục trên máy chủ Oracle; chạy `impdp` từ command line với service/schema đích.
-3. Sau import thành công, chạy `02_CAP_QUYEN.sql`, rồi hai file kiểm tra trong `03_KIEM_TRA`.
+3. Sau import, kết nối bằng owner `BTL_GIAYTHETHAO` và chạy `Database/Migrations/01_ORDER_ASSIGNMENT_HISTORY.sql` một lần. Sau đó chạy `02_CAP_QUYEN.sql` để cấp quyền các bảng mở rộng, rồi hai file kiểm tra trong `03_KIEM_TRA`.
 4. Đổi `OracleSchemaOwner` trong `App.config` thành `BTL_GIAYTHETHAO` và giữ service PDB đúng.
 
 Không import DMP vào database nguồn hoặc ghi đè schema có dữ liệu khi chưa có backup và kế hoạch. Luồng test và luồng DMP là hai lựa chọn riêng.
@@ -181,6 +190,7 @@ QuanLyBanGiay/
 ├── Program.cs / QuanLyBanGiay.csproj # điểm khởi chạy và cấu hình .NET 8
 ├── UI/                               # WinForms, service/query Oracle, resources từng Form
 ├── Database/TestData/                # scripts test chạy theo thứ tự 01–05
+├── Database/Migrations/              # nâng cấp schema cũ để bật lịch sử/phân công đơn
 └── BAN_GIAO_DATABASE/                # DMP, export log, DBA scripts và hướng dẫn import
 ```
 
